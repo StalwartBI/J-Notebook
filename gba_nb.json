@@ -1,0 +1,14 @@
+[
+  {
+    "content": "# Example App (GBA player)\n\n---",
+    "type": "markdown"
+  },
+  {
+    "content": "<div id='iframeContainer'></div>",
+    "type": "html"
+  },
+  {
+    "content": "var iframe = document.createElement('iframe');\niframe.src = 'https://gba.js.org/player/#pokemonred';\niframe.width = '100%'; // Set the width of the iframe\niframe.height = '600 auto'; // Set the height of the iframe\niframe.style.border = 'none'; // Optional: Removes the border\n\n// Append the iframe to a specific element in your document\ndocument.getElementById('output-cell-2').appendChild(iframe);",
+    "type": "javascript"
+  }
+]

@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Notebook</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/material-darker.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: rgb(18, 26, 33);
+            color: white;
+            margin: 0;
+            //padding-top: 60px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ccc;
+        }
+
+        .navbar {
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #202d36;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .navbar.collapsed .navbar-buttons {
+            display: none;
+        }
+
+        .navbar button {
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #2980b9;
+            color: white;
+            cursor: pointer;
+            flex-grow: 1;
+            margin: 5px;
+        }
+
+        .navbar button:hover {
+            background-color: #3498db;
+        }
+
+        .toggle-navbar-button {
+            background-color: #2980b9;
+            border: none;
+            margin-right: 10px;
+	    width:100%;
+
+        }
+
+        .toggle-navbar-button:hover {
+            background-color: #3498db;
+        }
+
+        .notebook-container {
+            max-width: auto;
+            margin: 10px;
+            padding: 20px;
+            background-color: #202d36;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell {
+            border: 1px solid #444;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background-color: #2c3e50;
+            position: relative;
+        }
+
+        .cell.active {
+            border-color: #3498db;
+        }
+
+        .cell.selected {
+            background-color: #34495e;
+        }
+
+        .CodeMirror {
+            height: auto;
+            background-color: #1e282c;
+            color: #fff;
+        }
+
+        .CodeMirror-gutters {
+            background-color: #1e282c;
+            border-right: 1px solid #444;
+        }
+
+        .CodeMirror-cursor {
+            border-left: 1px solid #fff;
+        }
+
+        .output {
+            white-space: pre-wrap;
+            background-color: #2a3b47;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #444;
+        }
+
+        .html-output {
+            background-color: #2a3b47;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #444;
+        }
+
+        .cell-controls {
+            display: flex;
+            //justify-content: space-between;
+            align-items: left;
+            margin-bottom: 10px;
+        }
+
+        .cell-controls select, .cell-controls button {
+            padding: 5px 10px;
+            margin: 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #34495e;
+            color: white;
+            cursor: pointer;
+        }
+
+        .run-button {
+            background-color: #2980b9;
+            border: none;
+        }
+
+        .run-button:hover {
+            background-color: #3498db;
+        }
+
+        .controls {
+            margin-top: 10px;
+        }
+
+        .context-menu {
+            position: absolute;
+            display: none;
+            background-color: #2c3e50;
+            border: 1px solid #444;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            padding: 10px;
+            list-style: none;
+            margin: 0;
+        }
+
+        .context-menu li {
+            padding: 8px 12px;
+            cursor: pointer;
+            color: white;
+        }
+
+        .context-menu li:hover {
+            background-color: #34495e;
+        }
+
+        .console-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #202d36;
+            border-top: 1px solid #444;
+            padding: 10px;
+            z-index: 1000;
+            resize: vertical;
+            overflow: auto;
+            max-height: 300px;
+            min-height: 50px;
+            display: block;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #202d36;
+            border-top: 1px solid #444;
+        }
+
+        .console-header button {
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #2980b9;
+            color: white;
+            cursor: pointer;
+        }
+
+        .console-header button:hover {
+            background-color: #3498db;
+        }
+
+        .console-output {
+            white-space: pre-wrap;
+            background-color: #2a3b47;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #444;
+            height: 100px;
+            overflow-y: auto;
+            display: block;
+        }
+
+        .console-input {
+            background-color: #1e282c;
+            color: white;
+            border: 1px solid #444;
+            padding: 5px;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .add-cell-bubble {
+            position: absolute;
+            background-color: #2980b9;
+            color: white;
+            border-radius: 15px;
+            width: 40px;
+            height: 25px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .add-cell-bubble:hover {
+            background-color: #3498db;
+        }
+
+        .cell.selected .add-cell-bubble {
+            display: flex;
+        }
+
+        .add-cell-bubble.above {
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .add-cell-bubble.below {
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+            }
+
+            .cell {
+                margin: 10px 0;
+            }
+
+            .add-cell-bubble {
+                right: -10px;
+                width: 35px;
+                height: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-navbar-button" onclick="toggleNavbar()">☰</button>
+    <div class="navbar" id="navbar">
+        <div class="navbar-buttons">
+            <button onclick="addCell()">Add Cell</button>
+            <button onclick="exportNotebook()">Export</button>
+            <button onclick="importNotebook()">Import</button>
+            <button onclick="runAllCells()">Run All</button>
+            <button onclick="toggleConsole()">Toggle Console</button>
+            <input type="file" id="import-file" style="display: none;" onchange="handleFileImport(event)">
+        </div>
+    </div>
+    <div class="notebook-container" id="notebook"></div>
+    <ul class="context-menu" id="context-menu">
+        <li onclick="copySelectedCells()">Copy</li>
+        <li onclick="cutSelectedCells()">Cut</li>
+        <li onclick="pasteCopiedCells()">Paste</li>
+        <li onclick="deleteSelectedCells()">Delete</li>
+        <li onclick="undoLastAction()">Undo</li>
+    </ul>
+    <div class="console-container" id="console-container">
+        <div class="console-header">
+            <span>Console</span>
+            <button onclick="toggleConsole()">Toggle</button>
+        </div>
+        <div class="console-output" id="console-output"></div>
+        <input type="text" class="console-input" id="console-input" onkeydown="handleConsoleInput(event)" placeholder="Type here and press Enter to execute JavaScript">
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/javascript-hint.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/xml-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/hint/html-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.2.0/markdown-it.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tern/0.23.2/tern.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tern/0.23.2/defs/ecmascript.json"></script>
+    <script>
+        const md = window.markdownit();
+        let cellIdCounter = 0;
+        const htmlCells = {};
+        let copiedCellContent = [];
+        let copiedCellType = [];
+        const actionsStack = [];
+        let isSelecting = false;
+        let lastSelectedCell = null;
+        let consoleCollapsed = false;
+
+        document.addEventListener('keydown', function(event) {
+            if (event.target.tagName.toLowerCase() === 'textarea' || event.target.tagName.toLowerCase() === 'input') {
+                return; // Ignore keydown events inside text inputs
+            }
+
+            const activeCell = document.querySelector('.cell.active');
+
+            if (event.shiftKey && event.key === 'Enter') {
+                if (activeCell) {
+                    runCell(activeCell.id);
+                    event.preventDefault();
+                }
+            } else if (activeCell) {
+                if (event.key.toLowerCase() === 'a') {
+                    addCellAbove(activeCell.id);
+                    event.preventDefault();
+                } else if (event.key.toLowerCase() === 'b') {
+                    addCellBelow(activeCell.id);
+                    event.preventDefault();
+                } else if (event.key.toLowerCase() === 'c' && event.ctrlKey) {
+                    copySelectedCells();
+                    event.preventDefault();
+                } else if (event.key.toLowerCase() === 'x' && event.ctrlKey) {
+                    cutSelectedCells();
+                    event.preventDefault();
+                } else if (event.key.toLowerCase() === 'v' && event.ctrlKey) {
+                    pasteCopiedCells();
+                    event.preventDefault();
+                } else if (event.key.toLowerCase() === 'd' && event.ctrlKey) {
+                    deleteSelectedCells();
+                    event.preventDefault();
+                } else if (event.key.toLowerCase() === 'z' && event.ctrlKey) {
+                    undoLastAction();
+                    event.preventDefault();
+                }
+            }
+        });
+
+        document.addEventListener('mousedown', function(event) {
+            if (!event.target.closest('.navbar') && !event.target.closest('.console-container') && !event.target.closest('.context-menu')) {
+                const firstCell = document.querySelector('.cell');
+                if (firstCell) {
+                    document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('active'));
+                    firstCell.classList.add('active');
+                }
+            }
+            if (event.target.closest('.cell')) {
+                const cell = event.target.closest('.cell');
+                if (event.shiftKey) {
+                    isSelecting = true;
+                    selectCell(cell, true);
+                    lastSelectedCell = cell;
+                } else {
+                    document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('selected'));
+                    selectCell(cell);
+                    isSelecting = false;
+                    lastSelectedCell = cell;
+                }
+            } else {
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('active');
+                    cell.classList.remove('selected');
+                });
+                isSelecting = false;
+                lastSelectedCell = null;
+            }
+        });
+
+        document.addEventListener('mousemove', function(event) {
+            if (isSelecting && event.target.closest('.cell')) {
+                const cell = event.target.closest('.cell');
+                if (cell !== lastSelectedCell) {
+                    selectCell(cell, true);
+                    lastSelectedCell = cell;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isSelecting = false;
+        });
+
+        function selectCell(cell, toggle = false) {
+            if (toggle) {
+                cell.classList.toggle('selected');
+            } else {
+                document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('active'));
+                cell.classList.add('active');
+            }
+        }
+
+        function addCell(content = '', type = 'javascript') {
+            const cellId = `cell-${cellIdCounter++}`;
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.id = cellId;
+
+            cell.innerHTML = `
+                <div class="cell-controls">
+                    <select onchange="changeCellType('${cellId}', this.value)">
+                        <option value="javascript" ${type === 'javascript' ? 'selected' : ''}>JavaScript</option>
+                        <option value="markdown" ${type === 'markdown' ? 'selected' : ''}>Markdown</option>
+                        <option value="html" ${type === 'html' ? 'selected' : ''}>HTML</option>
+                    </select>
+                    <button class="run-button" onclick="runCell('${cellId}')">Run</button>
+                    <button onclick="deleteCell('${cellId}')">Delete Cell</button>
+                </div>
+                <textarea id="editor-${cellId}">${content}</textarea>
+                <div class="output" id="output-${cellId}"></div>
+                <div class="add-cell-bubble above" onclick="addCellAbove('${cellId}')">+</div>
+                <div class="add-cell-bubble below" onclick="addCellBelow('${cellId}')">+</div>
+            `;
+
+            cell.addEventListener('click', function(event) {
+                if (!event.shiftKey) {
+                    document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('active'));
+                    cell.classList.add('active');
+                }
+            });
+
+            document.getElementById('notebook').appendChild(cell);
+
+            const editor = initializeEditor(cellId, type);
+            cell.editor = editor;  // Store the editor instance in the cell element
+
+            logAction(`Added cell ${cellId}`);
+        }
+
+        function addCellAbove(cellId, content = '', type = 'javascript') {
+            const cell = document.getElementById(cellId);
+            const newCellId = `cell-${cellIdCounter++}`;
+            const newCell = document.createElement('div');
+            newCell.className = 'cell';
+            newCell.id = newCellId;
+
+            newCell.innerHTML = `
+                <div class="cell-controls">
+                    <select onchange="changeCellType('${newCellId}', this.value)">
+                        <option value="javascript" ${type === 'javascript' ? 'selected' : ''}>JavaScript</option>
+                        <option value="markdown" ${type === 'markdown' ? 'selected' : ''}>Markdown</option>
+                        <option value="html" ${type === 'html' ? 'selected' : ''}>HTML</option>
+                    </select>
+                    <button class="run-button" onclick="runCell('${newCellId}')">Run</button>
+                    <button onclick="deleteCell('${newCellId}')">Delete Cell</button>
+                </div>
+                <textarea id="editor-${newCellId}">${content}</textarea>
+                <div class="controls">
+                    <button class="run-button" onclick="runCell('${newCellId}')">Run</button>
+                </div>
+                <div class="output" id="output-${newCellId}"></div>
+                <div class="add-cell-bubble above" onclick="addCellAbove('${newCellId}')">+</div>
+                <div class="add-cell-bubble below" onclick="addCellBelow('${newCellId}')">+</div>
+            `;
+
+            newCell.addEventListener('click', function(event) {
+                if (!event.shiftKey) {
+                    document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('active'));
+                    newCell.classList.add('active');
+                }
+            });
+
+            cell.parentNode.insertBefore(newCell, cell);
+
+            const editor = initializeEditor(newCellId, type);
+            newCell.editor = editor;  // Store the editor instance in the cell element
+
+            actionsStack.push({ action: 'add', cellId: newCellId });
+
+            logAction(`Added cell above ${cellId}`);
+        }
+
+        function addCellBelow(cellId, content = '', type = 'javascript') {
+            const cell = document.getElementById(cellId);
+            const newCellId = `cell-${cellIdCounter++}`;
+            const newCell = document.createElement('div');
+            newCell.className = 'cell';
+            newCell.id = newCellId;
+
+            newCell.innerHTML = `
+                <div class="cell-controls">
+                    <select onchange="changeCellType('${newCellId}', this.value)">
+                        <option value="javascript" ${type === 'javascript' ? 'selected' : ''}>JavaScript</option>
+                        <option value="markdown" ${type === 'markdown' ? 'selected' : ''}>Markdown</option>
+                        <option value="html" ${type === 'html' ? 'selected' : ''}>HTML</option>
+                    </select>
+                    <button class="run-button" onclick="runCell('${newCellId}')">Run</button>
+                    <button onclick="deleteCell('${newCellId}')">Delete Cell</button>
+                </div>
+                <textarea id="editor-${newCellId}">${content}</textarea>
+                <div class="controls">
+                    <button class="run-button" onclick="runCell('${newCellId}')">Run</button>
+                </div>
+                <div class="output" id="output-${newCellId}"></div>
+                <div class="add-cell-bubble above" onclick="addCellAbove('${newCellId}')">+</div>
+                <div class="add-cell-bubble below" onclick="addCellBelow('${newCellId}')">+</div>
+            `;
+
+            newCell.addEventListener('click', function(event) {
+                if (!event.shiftKey) {
+                    document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('active'));
+                    newCell.classList.add('active');
+                }
+            });
+
+            cell.parentNode.insertBefore(newCell, cell.nextSibling);
+
+            const editor = initializeEditor(newCellId, type);
+            newCell.editor = editor;  // Store the editor instance in the cell element
+
+            actionsStack.push({ action: 'add', cellId: newCellId });
+
+            logAction(`Added cell below ${cellId}`);
+        }
+
+        function deleteCell(cellId) {
+            const cell = document.getElementById(cellId);
+            delete htmlCells[cellId]; // Remove the cell from the htmlCells dictionary if it exists
+            cell.parentNode.removeChild(cell);
+            logAction(`Deleted cell ${cellId}`);
+        }
+
+        function deleteSelectedCells() {
+            const selectedCells = document.querySelectorAll('.cell.selected');
+            selectedCells.forEach(cell => {
+                actionsStack.push({ action: 'delete', cellId: cell.id, content: getCellContent(cell.id), type: getCellType(cell.id) });
+                deleteCell(cell.id);
+            });
+        }
+
+        function copySelectedCells() {
+            copiedCellContent = [];
+            copiedCellType = [];
+            const selectedCells = document.querySelectorAll('.cell.selected');
+            selectedCells.forEach(cell => {
+                copiedCellContent.push(getCellContent(cell.id));
+                copiedCellType.push(getCellType(cell.id));
+            });
+            logAction('Copied selected cells');
+        }
+
+        function cutSelectedCells() {
+            copySelectedCells();
+            deleteSelectedCells();
+            logAction('Cut selected cells');
+        }
+
+        function pasteCopiedCells() {
+            if (copiedCellContent.length > 0) {
+                copiedCellContent.forEach((content, index) => {
+                    addCell(content, copiedCellType[index]);
+                });
+                logAction('Pasted copied cells');
+            }
+        }
+
+        function changeCellType(cellId, cellType) {
+            const cell = document.getElementById(cellId);
+            const editor = cell.editor;  // Retrieve the editor instance from the cell element
+            const mode = cellType === 'javascript' ? 'javascript' : (cellType === 'markdown' ? 'markdown' : 'htmlmixed');
+            editor.setOption('mode', mode);
+            logAction(`Changed cell ${cellId} type to ${cellType}`);
+        }
+
+        function initializeEditor(cellId, mode) {
+            const textarea = document.getElementById(`editor-${cellId}`);
+            const editor = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                mode: mode,
+                theme: 'material-darker',
+                extraKeys: {
+                    'Shift-Enter': () => {
+                        runCell(cellId);
+                    },
+                    'Ctrl-Space': 'autocomplete' // Trigger autocomplete with Ctrl-Space
+                }
+            });
+
+            // Enable autocomplete for JavaScript mode
+            if (mode === 'javascript') {
+                editor.on('inputRead', function(instance, change) {
+                    if (change.text[0] === '.' || /[\w\xA0-\uFFFF]/.test(change.text[0])) {
+                        // Delay the autocomplete to give better user experience
+                        setTimeout(() => {
+                            instance.showHint({completeSingle: false});
+                        }, 100);
+                    }
+                });
+            } else if (mode === 'htmlmixed') {
+                editor.on('inputRead', function(instance) {
+                    if (!instance.state.completionActive && /[<]/.test(instance.getValue())) {
+                        setTimeout(() => {
+                            instance.showHint({ completeSingle: false });
+                        }, 100);
+                    }
+                });
+            }
+
+            return editor;
+        }
+
+        function runCell(cellId) {
+            const cell = document.getElementById(cellId);
+            const editor = cell.editor;  // Retrieve the editor instance from the cell element
+            const output = document.getElementById(`output-${cellId}`);
+            const cellType = cell.querySelector('select').value;
+            const code = editor.getValue();
+
+            if (cellType === 'javascript') {
+                try {
+                    const func = new Function('output', code);
+                    func(output);
+                } catch (error) {
+                    output.innerText = `Error: ${error.message}`;
+                }
+            } else if (cellType === 'markdown') {
+                output.innerHTML = md.render(code);
+            } else if (cellType === 'html') {
+                output.innerHTML = code;
+                htmlCells[cellId] = output; // Store the output element in the htmlCells dictionary
+            }
+
+            logAction(`Ran cell ${cellId}`);
+        }
+
+        function updateHtmlCell(cellId, htmlContent) {
+            const cellOutput = htmlCells[cellId];
+            if (cellOutput) {
+                cellOutput.innerHTML = htmlContent;
+            } else {
+                console.error(`HTML cell with ID ${cellId} does not exist.`);
+            }
+        }
+
+        function updateConsoleOutput(message) {
+            const consoleOutput = document.getElementById('console-output');
+            consoleOutput.innerText += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function handleConsoleInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('console-input');
+                const code = input.value;
+                input.value = '';
+
+                const originalLog = console.log;
+                const originalError = console.error;
+                const logs = [];
+
+                console.log = function(message) {
+                    logs.push(message);
+                    updateConsoleOutput(message);
+                };
+                
+                console.error = function(message) {
+                    logs.push(`Error: ${message}`);
+                    updateConsoleOutput(`Error: ${message}`);
+                };
+
+                try {
+                    const result = eval(code);
+                    if (result !== undefined) {
+                        logs.push(result);
+                        updateConsoleOutput(result);
+                    }
+                } catch (error) {
+                    logs.push(`Error: ${error.message}`);
+                    updateConsoleOutput(`Error: ${error.message}`);
+                } finally {
+                    console.log = originalLog;
+                    console.error = originalError;
+                }
+
+                logAction(`Executed console command: ${code}`);
+            }
+        }
+
+        function exportNotebook() {
+            const notebook = [];
+            document.querySelectorAll('.cell').forEach(cell => {
+                const cellId = cell.id;
+                const editor = cell.editor;
+                const content = editor.getValue();
+                const type = cell.querySelector('select').value;
+                notebook.push({ content, type });
+            });
+
+            const blob = new Blob([JSON.stringify(notebook, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'notebook.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            logAction('Exported notebook');
+        }
+
+        function importNotebook() {
+            document.getElementById('import-file').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const notebook = JSON.parse(e.target.result);
+                    document.getElementById('notebook').innerHTML = '';
+                    cellIdCounter = 0;
+                    notebook.forEach(cell => addCell(cell.content, cell.type));
+                };
+                reader.readAsText(file);
+                logAction('Imported notebook');
+            }
+        }
+
+        function undoLastAction() {
+            if (actionsStack.length > 0) {
+                const lastAction = actionsStack.pop();
+
+                if (lastAction.action === 'delete') {
+                    addCellAbove(lastAction.cellId, lastAction.content, lastAction.type);
+                } else if (lastAction.action === 'add') {
+                    deleteCell(lastAction.cellId);
+                }
+
+                logAction('Undid last action');
+            }
+        }
+
+        function getCellContent(cellId) {
+            const cell = document.getElementById(cellId);
+            return cell.editor.getValue();
+        }
+
+        function getCellType(cellId) {
+            const cell = document.getElementById(cellId);
+            return cell.querySelector('select').value;
+        }
+
+        function logAction(action) {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            consoleOutput.innerText += `[${timestamp}] ${action}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function toggleConsole() {
+            const consoleContainer = document.getElementById('console-container');
+            consoleCollapsed = !consoleCollapsed;
+            consoleContainer.style.display = consoleCollapsed ? 'none' : 'block';
+            logAction('Toggled console visibility');
+        }
+
+        function runAllCells() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                runCell(cell.id);
+            });
+            logAction('Ran all cells');
+        }
+
+        function toggleNavbar() {
+            const navbar = document.getElementById('navbar');
+            navbar.classList.toggle('collapsed');
+        }
+
+        // Initialize the first cell
+        addCell();
+
+    </script>
+</body>
+</html>
